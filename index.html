@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポケモン覚えゲーム</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 50px;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    #pokemon-number {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    #pokemon-image {
+      width: 300px;
+      height: 300px;
+      object-fit: contain;
+      margin-bottom: 20px;
+    }
+    #answer {
+      font-size: 24px;
+      color: blue;
+      cursor: pointer;
+    }
+    select {
+      margin-bottom: 20px;
+      font-size: 16px;
+      padding: 5px;
+    }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+    td {
+      padding: 5px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>ポケモン覚えゲーム</h1>
+
+  <!-- 地方の選択肢 -->
+  <label for="region">地方を選んでください:</label>
+  <select id="region">
+    <option value="1-1025">全て</option>
+    <option value="1-151">カントー地方: 1〜151</option>
+    <option value="152-251">ジョウト地方: 152〜251</option>
+    <option value="252-386">ホウエン地方: 252〜386</option>
+    <option value="387-493">シンオウ地方: 387〜493</option>
+    <option value="494-649">イッシュ地方: 494〜649</option>
+    <option value="650-721">カロス地方: 650〜721</option>
+    <option value="722-807">アローラ地方: 722〜807</option>
+    <option value="808-898">ガラル地方: 808〜898</option>
+    <option value="899-905">ヒスイ地方: 899〜905</option>
+    <option value="906-1025">バルデア地方: 906〜1025</option>
+  </select>
+
+  <div>
+    <img id="pokemon-image" src="" alt="ポケモン画像">
+  </div>
+
+  <div id="pokemon-number">?</div>
+  <div id="answer" style="display: none;">答えを表示</div>
+  <button id="memorized-button">覚えた</button>
+  <button id="not-memorized-button">覚えてない</button>
+  <button id="reset-button">リセット</button>
+
+  <!-- 覚えた数字のテーブル -->
+  <table id="memorized-table"></table>
+
+  <script>
+    let memorizedNumbers = new Set(JSON.parse(localStorage.getItem('memorizedNumbers')) || []); // ローカルストレージからロード
+    let totalNumbers = []; // 現在の地方の番号範囲
+    let currentNumber = null; // 現在のポケモン番号を保持
+
+    function saveToLocalStorage() {
+      localStorage.setItem('memorizedNumbers', JSON.stringify([...memorizedNumbers]));
+    }
+
+    // 地方の範囲を設定する関数
+    function setRegionRange() {
+      const regionSelect = document.getElementById('region');
+      const [start, end] = regionSelect.value.split('-').map(Number);
+      totalNumbers = Array.from({ length: end - start + 1 }, (_, i) => i + start); // 選択した地方の番号範囲
+    }
+
+    // 地方選択が変わったときに範囲を変更
+    document.getElementById('region').addEventListener('change', () => {
+      setRegionRange();
+      showRandomNumber();
+    });
+
+    function getRandomNumber() {
+      const availableNumbers = totalNumbers.filter(num => !memorizedNumbers.has(num));
+      if (availableNumbers.length === 0) {
+        document.getElementById('pokemon-number').textContent = '完璧に覚えた！！';
+        document.getElementById('pokemon-image').src = ''; // 完璧に覚えた場合は画像を非表示
+        return null;
+      }
+      const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+      return availableNumbers[randomIndex];
+    }
+
+    function padNumber4(number) {
+      return String(number).padStart(4, '0'); // 4桁の0埋め
+    }
+
+    function padNumber3(number) {
+      return String(number).padStart(3, '0'); // 3桁の0埋め
+    }
+
+    function showRandomNumber() {
+      const number = getRandomNumber();
+      if (number !== null) {
+        currentNumber = number;
+        document.getElementById('pokemon-number').textContent = number;
+        // const paddedNumberForImage = number;
+        const paddedNumberForImage = padNumber3(number);
+        const imageUrl = `https://all-pokemon-ierukana.com/img/pokemon/${paddedNumberForImage}.png`; // 画像のURLを作成
+        document.getElementById('pokemon-image').src = imageUrl; // 画像を表示
+        document.getElementById('answer').style.display = 'block'; // 答えのボタンを表示
+        document.getElementById('answer').textContent = '答えを表示'; // ボタンのテキストをリセット
+      }
+    }
+
+    // 答えを表示する関数
+    function showAnswer() {
+      if (currentNumber !== null) {
+        // const paddedNumberForAPI = padNumber3(currentNumber); // API用の番号は3桁
+        // const paddedNumberForAPI = padNumber4(currentNumber); // API用の番号は3桁
+        const detailUrl = `https://pokeapi.co/api/v2/pokemon-species/${currentNumber}`;
+
+        fetch(detailUrl)
+          .then(response => response.json())
+          .then(data => {
+            document.getElementById('answer').textContent = `答え: ${data.names.find(name => name.language.name === 'ja').name}`;
+          })
+          .catch(error => console.error('Error:', error));
+      }
+    }
+
+    // 覚えた数字と覚えていない数字をテーブルに表示する関数
+    function updateMemorizedTable() {
+      const table = document.getElementById('memorized-table');
+      table.innerHTML = ''; // 既存のテーブルをクリア
+      let row;
+      totalNumbers.forEach((num, index) => {
+        if (index % 15 === 0) {
+          row = table.insertRow(); // 15個ごとに新しい行を追加
+        }
+        const cell = row.insertCell();
+        if (memorizedNumbers.has(num)) {
+          cell.textContent = `${num} ◯`; // 覚えた番号には◯を表示
+          // 色を緑にする
+          cell.style.color = 'gray';
+        } else {
+          cell.textContent = `${num} ×`; // 覚えていない番号には×を表示
+          // 色を赤にする
+          cell.style.color = 'red';
+        }
+      });
+    }
+
+
+    // 「覚えた」ボタンが押されたとき
+    document.getElementById('memorized-button').addEventListener('click', () => {
+      const number = parseInt(document.getElementById('pokemon-number').textContent);
+      if (!isNaN(number)) {
+        memorizedNumbers.add(number); // 覚えた番号をセットに追加
+        saveToLocalStorage(); // ローカルストレージに保存
+        updateMemorizedTable(); // テーブルを更新
+        showRandomNumber(); // 次の番号を表示
+      }
+    });
+
+    // 「覚えてない」ボタンが押されたとき
+    document.getElementById('not-memorized-button').addEventListener('click', () => {
+      showRandomNumber(); // 次の番号を表示
+    });
+
+    // 「リセット」ボタンが押されたとき
+    document.getElementById('reset-button').addEventListener('click', () => {
+      memorizedNumbers.clear(); // 覚えた番号をリセット
+      localStorage.removeItem('memorizedNumbers'); // ローカルストレージから削除
+      updateMemorizedTable(); // テーブルをクリア
+      showRandomNumber(); // 新しい番号を表示
+    });
+
+    // 「答えを表示」ボタンがクリックされたとき
+    document.getElementById('answer').addEventListener('click', showAnswer);
+
+    // キーボードのスペースキー、←キー、→キーで操作するためのイベントリスナー
+    document.addEventListener('keydown', (event) => {
+      switch (event.key) {
+        case ' ': // スペースキーを押したとき（答えを表示）
+          event.preventDefault(); // スクロールなどのデフォルト動作を防ぐ
+          showAnswer();
+          break;
+        case 'ArrowLeft': // ←キーを押したとき（覚えた）
+          document.getElementById('memorized-button').click();
+          break;
+        case 'ArrowRight': // →キーを押したとき（覚えてない）
+          document.getElementById('not-memorized-button').click();
+          break;
+      }
+    });
+
+
+    // ページ読み込み時に地方範囲を設定し、最初の番号を表示
+    setRegionRange();
+    showRandomNumber();
+    updateMemorizedTable(); // ページ読み込み時にテーブルを表示
+  </script>
+
+</body>
+</html>
