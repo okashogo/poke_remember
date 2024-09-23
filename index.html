@@ -30,6 +30,9 @@
       color: blue;
       cursor: pointer;
     }
+    #memorized-table {
+      margin-left: -30px;
+    }
     select {
       margin-bottom: 20px;
       font-size: 16px;
@@ -72,11 +75,11 @@
   <div id="pokemon-number">?</div>
   <div id="answer" style="display: none;">答えを表示</div>
   <button id="memorized-button">覚えた</button>
-  <button id="not-memorized-button">覚えてない</button>
-  <button id="reset-button">リセット</button>
+  <button id="not-memorized-button">覚えてない</button
 
   <!-- 覚えた数字のテーブル -->
   <table id="memorized-table"></table>
+  <button id="reset-button">リセット</button>
 
   <script>
     let memorizedNumbers = new Set(JSON.parse(localStorage.getItem('memorizedNumbers')) || []); // ローカルストレージからロード
@@ -163,10 +166,12 @@
           cell.textContent = `${num} ◯`; // 覚えた番号には◯を表示
           // 色を緑にする
           cell.style.color = 'gray';
+          cell.style.fontSize = '7px'; // サイズを小さく
         } else {
           cell.textContent = `${num} ×`; // 覚えていない番号には×を表示
           // 色を赤にする
           cell.style.color = 'red';
+          cell.style.fontSize = '7px'; // サイズを小さく
         }
       });
     }
